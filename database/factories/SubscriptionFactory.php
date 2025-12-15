@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\BillingCycle;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,7 +20,7 @@ class SubscriptionFactory extends Factory
         return [
             'name' => fake()->company(), 
             'price_in_cents' => fake()->numberBetween(1000, 9990), 
-            'billing_cycle' => fake()->randomElement(['monthly', 'yearly', 'weekly']), 
+            'billing_cycle' => fake()->randomElement(BillingCycle::cases()), 
             'next_billing_date' => fake()->dateTimeBetween('now', '+1 year'), 
             'status' => fake()->randomElement(['active', 'inactive']),
             'notes' => fake()->sentence()

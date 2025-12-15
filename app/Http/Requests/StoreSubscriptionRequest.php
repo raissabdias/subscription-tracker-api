@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\BillingCycle;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreSubscriptionRequest extends FormRequest
 {
@@ -24,7 +26,7 @@ class StoreSubscriptionRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:1',
-            'billing_cycle' => 'required|in:monthly,yearly,weekly',
+            'billing_cycle' => ['required', Rule::enum(BillingCycle::class)],
             'next_payment' => 'required|date',
             'status' => 'nullable|in:active,inactive',
             'notes' => 'nullable|string'

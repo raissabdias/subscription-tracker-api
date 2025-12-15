@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BillingCycle;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -22,5 +23,6 @@ class Subscription extends Model
     protected $casts = [
         'next_billing_date' => 'date',
         'price_in_cents' => 'integer',
+        'billing_cycle' => BillingCycle::class
     ];
 }
