@@ -21,14 +21,14 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Store a newly created resource in storage. (POST)
      */
     public function store(StoreSubscriptionRequest $request)
     {
         $data = $request->validated();
 
         // Propriedadas mais amigáveis 
-        $data['price_in_cents'] = (int) ($request->price * 100);
+        $data['price_in_cents'] = (int) round($request->price * 100);
         $data['next_billing_date'] = $request->next_payment;
 
         $subscription = Subscription::create($data);
@@ -37,26 +37,41 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified resource. (GET)
      */
-    public function show(string $id)
+    public function show(Subscription $subscription)
     {
-        //
+        return new SubscriptionResource($subscription);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update the specified resource in storage. (PUT/PATCH)
      */
-    public function update(Request $request, string $id)
+    public function update(StoreSubscriptionRequest $request, Subscription $subscription)
     {
-        //
+        $data = $request->validated();
+
+        // Converter preços para centavos
+        if ($request->has('price')) {
+            $data['price_in_cents'] = (int) (int) round($request->price * 100);
+        }
+
+        if ($request->has('next_payment')) {
+            $data['next_billing_date'] = $request->next_payment;
+        }
+
+        $subscription->update($data);
+
+        return new SubscriptionResource($subscription);
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified resource from storage. (DELETE)
      */
-    public function destroy(string $id)
+    public function destroy(Subscription $subscription)
     {
-        //
+        $subscription->delete();
+
+        return response()->noContent();
     }
 }
