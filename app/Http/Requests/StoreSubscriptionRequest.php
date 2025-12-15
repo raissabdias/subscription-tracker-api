@@ -22,7 +22,6 @@ class StoreSubscriptionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => 'required|exists:users,id', 
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:1',
             'billing_cycle' => 'required|in:monthly,yearly,weekly',

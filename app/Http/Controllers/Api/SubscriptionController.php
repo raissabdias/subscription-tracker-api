@@ -13,9 +13,9 @@ class SubscriptionController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $subscriptions = Subscription::all();
+        $subscriptions = $request->user()->subscriptions;
         
         return SubscriptionResource::collection($subscriptions);
     }
@@ -26,6 +26,7 @@ class SubscriptionController extends Controller
     public function store(StoreSubscriptionRequest $request)
     {
         $data = $request->validated();
+        $data['user_id'] = $request->user()->id;
 
         // Propriedadas mais amigáveis 
         $data['price_in_cents'] = (int) round($request->price * 100);
