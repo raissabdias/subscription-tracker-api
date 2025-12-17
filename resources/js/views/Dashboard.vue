@@ -31,6 +31,11 @@
                         <Tag :value="slotProps.data.status" :severity="getStatusSeverity(slotProps.data.status)" />
                     </template>
                 </Column>
+                <Column header="Ações" :exportable="false" style="min-width:8rem">
+                    <template #body="slotProps">
+                        <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteSubscription(slotProps.data)" />
+                    </template>
+                </Column>
             </DataTable>
         </div>
         <Dialog v-model:visible="dialogVisible" modal header="Nova Assinatura" :style="{ width: '400px' }">
@@ -70,6 +75,8 @@ import { ref, reactive, onMounted } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
+import { useConfirm } from 'primevue/useconfirm';
+
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
@@ -81,11 +88,14 @@ import Select from 'primevue/select';
 import DatePicker from 'primevue/datepicker';
 
 const router = useRouter();
+const toast = useToast();
+const confirm = useConfirm();
+
 const subscriptions = ref([]);
 const loading = ref(true);
 const saving = ref(false);
 const dialogVisible = ref(false);
-const toast = useToast();
+
 const form = reactive({
     name: '',
     price: null,
@@ -210,6 +220,43 @@ const saveSubscription = async () => {
     } finally {
         saving.value = false;
     }
+};
+
+// Deletar assinatura
+const confirmDeleteSubscription = (subscription) => {
+    confirm.require({
+        message: `Tem a certeza que deseja apagar ${subscription.name}?`,
+        header: 'Confirmação',
+        icon: 'pi pi-exclamation-triangle',
+        rejectProps: {
+            label: 'Cancelar',
+            severity: 'secondary',
+            outlined: true
+        },
+        acceptProps: {
+            label: 'Apagar',
+            severity: 'danger'
+        },
+        accept: async () => {
+            try {
+                await axios.delete(`/api/subscriptions/${subscription.id}`);
+                toast.add({
+                    severity: 'success',
+                    summary: 'Apagado',
+                    detail: 'Assinatura removida com sucesso.',
+                    life: 3000
+                });
+                await fetchSubscriptions();
+            } catch (error) {
+                toast.add({
+                    severity: 'error',
+                    summary: 'Erro',
+                    detail: 'Erro ao remover assinatura.',
+                    life: 3000
+                });
+            }
+        }
+    });
 };
 </script>
 
