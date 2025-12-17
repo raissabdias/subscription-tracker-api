@@ -7,6 +7,20 @@
                 <Button label="Sair" icon="pi pi-sign-out" severity="secondary" @click="handleLogout" class="ml-2" />
             </div>
         </div>
+        <div class="kpi-grid">
+            <Card style="background: #eff6ff; border-left: 4px solid #3b82f6">
+                <template #title>Assinaturas Ativas</template>
+                <template #content>
+                    <p class="kpi-value">{{ totalActive }}</p>
+                </template>
+            </Card>
+            <Card style="background: #f0fdf4; border-left: 4px solid #22c55e">
+                <template #title>Custo Mensal Estimado</template>
+                <template #content>
+                    <p class="kpi-value">{{ formatCurrency(monthlyCost) }}</p>
+                </template>
+            </Card>
+        </div>
         <div class="card-table">
             <DataTable :value="subscriptions" tableStyle="min-width: 50rem" :loading="loading" paginator :rows="5" :rowsPerPageOptions="[5, 10, 20]" v-model:filters="filters" :globalFilterFields="['name']">
                 <template #header>
@@ -24,7 +38,7 @@
                         {{ formatCurrency(slotProps.data.price) }}
                     </template>
                 </Column>
-                <Column header="Ciclo" field="billing_cycle" sortable>
+                <Column header="Ciclo" field="cycle" sortable>
                     <template #body="slotProps">
                         {{ translateCycle(slotProps.data.cycle) }}
                     </template>
@@ -76,7 +90,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
@@ -94,6 +108,7 @@ import Select from 'primevue/select';
 import DatePicker from 'primevue/datepicker';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
+import Card from 'primevue/card';
 
 const router = useRouter();
 const toast = useToast();
@@ -274,6 +289,31 @@ const editSubscription = (subscription) => {
     dialogVisible.value = true;
 };
 
+// KPI de assinaturas ativas
+const totalActive = computed(() => {
+    return subscriptions.value.filter(sub => sub.status === 'active').length;
+});
+
+// KPI de custos mensais
+const monthlyCost = computed(() => {
+    const activeSubs = subscriptions.value.filter(sub => sub.status === 'active');
+    
+    // Soma calculando a proporção mensal
+    const total = activeSubs.reduce((acc, sub) => {
+        const price = Number(sub.price); // Em centavos
+        
+        if (sub.cycle === 'yearly') {
+            return acc + (price / 12);
+        }
+        if (sub.cycle === 'weekly') {
+            return acc + (price * 4);
+        }
+        return acc + price;
+    }, 0);
+
+    return total; 
+});
+
 // Formatação dos valores para reais
 const formatCurrency = (valueInCents) => {
     if (!valueInCents) return 'R$ 0,00';
@@ -331,6 +371,19 @@ const getStatusSeverity = (status) => {
     padding: 1rem;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.kpi-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #1f2937;
+    margin: 0;
 }
 
 .field { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
