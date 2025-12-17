@@ -33,34 +33,30 @@
                 </Column>
                 <Column header="Ações" :exportable="false" style="min-width:8rem">
                     <template #body="slotProps">
+                        <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editSubscription(slotProps.data)" />
                         <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteSubscription(slotProps.data)" />
                     </template>
                 </Column>
             </DataTable>
         </div>
-        <Dialog v-model:visible="dialogVisible" modal header="Nova Assinatura" :style="{ width: '400px' }">
+        <Dialog v-model:visible="dialogVisible" modal :header="form.id ? 'Editar Assinatura' : 'Nova Assinatura'" :style="{ width: '400px' }">
             <div class="form-content">
-                
                 <div class="field">
                     <label for="name">Nome do Serviço</label>
-                    <InputText id="name" v-model="form.name" required autofocus />
+                    <InputText id="name" v-model="form.name" required autofocus fluid />
                 </div>
-
                 <div class="field">
                     <label for="price">Preço</label>
-                    <InputNumber id="price" v-model="form.price" mode="currency" currency="BRL" locale="pt-BR" />
+                    <InputNumber id="price" v-model="form.price" mode="currency" currency="BRL" locale="pt-BR" fluid />
                 </div>
-
                 <div class="field">
                     <label for="cycle">Ciclo</label>
-                    <Select id="cycle" v-model="form.billing_cycle" :options="cycleOptions" optionLabel="label" optionValue="value" placeholder="Selecione" />
+                    <Select id="cycle" v-model="form.billing_cycle" :options="cycleOptions" optionLabel="label" optionValue="value" placeholder="Selecione" fluid />
                 </div>
-
                 <div class="field">
                     <label for="date">Primeiro Pagamento</label>
                     <DatePicker id="date" v-model="form.next_payment" dateFormat="dd/mm/yy" showIcon fluid />
                 </div>
-
             </div>
             <template #footer>
                 <Button label="Cancelar" icon="pi pi-times" text @click="dialogVisible = false" />
@@ -102,6 +98,7 @@ const form = reactive({
     billing_cycle: '',
     next_billing_date: null
 });
+
 const cycleOptions = [
     {label: 'Mensal', value: 'monthly'},
     {label: 'Anual', value: 'yearly'},
@@ -145,40 +142,6 @@ const handleLogout = async () => {
     router.push('/login');
 };
 
-// Formatação dos valores para reais
-const formatCurrency = (valueInCents) => {
-    if (!valueInCents) return 'R$ 0,00';
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(valueInCents / 100); // Lembre-se de dividir por 100!
-};
-
-// Formatação de data no padrão pt-br
-const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('pt-BR');
-};
-
-// Traduz o ENUM do banco para Português
-const translateCycle = (cycle) => {
-    const map = {
-        'monthly': 'Mensal',
-        'yearly': 'Anual',
-        'weekly': 'Semanal'
-    };
-    return map[cycle] || cycle;
-};
-
-// Cores do status
-const getStatusSeverity = (status) => {
-    switch (status) {
-        case 'active': return 'success';
-        case 'inactive': return 'danger';
-        default: return 'info';
-    }
-};
-
 // Ativar modal de adição
 const openNewSubscription = () => {
     // Limpa o formulário antes de abrir
@@ -194,22 +157,38 @@ const saveSubscription = async () => {
     saving.value = true;
 
     try {
+        const formatDatePayload = (date) => {
+            if (!date) return null;
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
         const payload = {
             ...form,
             price: form.price ? Math.round(form.price * 100) : 0, // Alterar para inteiro (29.90 -> 2990)
-            next_billing_date: form.next_billing_date ? form.next_billing_date.toISOString().split('T')[0] : null // Extrair YYYY-MM-DD
+            next_payment: formatDatePayload(form.next_payment)
         };
 
-        await axios.post('/api/subscriptions', payload);
+        if (form.id) {
+            await axios.put(`/api/subscriptions/${form.id}`, payload);
+            toast.add({
+                severity: 'success',
+                detail: form.name + ' alterado com sucesso.',
+                life: 5000
+            });
+        } else {
+            await axios.post('/api/subscriptions', payload);
+            toast.add({
+                severity: 'success',
+                detail: form.name + ' adicionado com sucesso.',
+                life: 5000
+            });
+        }
         
         dialogVisible.value = false;
         await fetchSubscriptions();
-
-        toast.add({
-            severity: 'success',
-            detail: form.name + ' adicionado com sucesso.',
-            life: 5000
-        });
 
     } catch (error) {
         toast.add({
@@ -257,6 +236,59 @@ const confirmDeleteSubscription = (subscription) => {
             }
         }
     });
+};
+
+// Editar assinatura
+const editSubscription = (subscription) => {
+    form.id = subscription.id;
+    form.name = subscription.name;
+    form.billing_cycle = subscription.cycle;
+    form.price = subscription.price / 100; 
+
+    if (subscription.next_payment) {
+        const [year, month, day] = subscription.next_payment.split('-');
+        form.next_payment = new Date(Number(year), Number(month) - 1, Number(day), 12, 0, 0);
+    } else {
+        form.next_payment = null;
+    }
+    
+    dialogVisible.value = true;
+};
+
+// Formatação dos valores para reais
+const formatCurrency = (valueInCents) => {
+    if (!valueInCents) return 'R$ 0,00';
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(valueInCents / 100); // Lembre-se de dividir por 100!
+};
+
+// Formatação de data no padrão pt-br
+const formatDate = (dateString) => {
+if (!dateString) return '-';
+    const [year, month, day] = dateString.split('-');
+    const date = new Date(Number(year), Number(month) - 1, Number(day), 12, 0, 0);
+    return date.toLocaleDateString('pt-BR');
+};
+
+// Traduz o ENUM do banco para Português
+const translateCycle = (cycle) => {
+    const map = {
+        'monthly': 'Mensal',
+        'yearly': 'Anual',
+        'weekly': 'Semanal'
+    };
+    return map[cycle] || cycle;
+};
+
+// Cores do status
+const getStatusSeverity = (status) => {
+    switch (status) {
+        case 'active': return 'success';
+        case 'inactive': return 'danger';
+        default: return 'info';
+    }
 };
 </script>
 
