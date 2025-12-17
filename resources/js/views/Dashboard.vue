@@ -8,25 +8,33 @@
             </div>
         </div>
         <div class="card-table">
-            <DataTable :value="subscriptions" tableStyle="min-width: 50rem" :loading="loading">
-                <Column field="id" header="#"></Column>
-                <Column field="name" header="Serviço"></Column>
-                <Column header="Preço">
+            <DataTable :value="subscriptions" tableStyle="min-width: 50rem" :loading="loading" paginator :rows="5" :rowsPerPageOptions="[5, 10, 20]" v-model:filters="filters" :globalFilterFields="['name']">
+                <template #header>
+                    <div class="flex justify-end">
+                        <IconField iconPosition="left">
+                            <InputIcon class="pi pi-search" />
+                            <InputText v-model="filters['global'].value" placeholder="Pesquisar serviço..." />
+                        </IconField>
+                    </div>
+                </template>
+                <Column field="id" header="#" sortable></Column>
+                <Column field="name" header="Serviço" sortable></Column>
+                <Column header="Preço" field="price" sortable>
                     <template #body="slotProps">
                         {{ formatCurrency(slotProps.data.price) }}
                     </template>
                 </Column>
-                <Column header="Ciclo">
+                <Column header="Ciclo" field="billing_cycle" sortable>
                     <template #body="slotProps">
                         {{ translateCycle(slotProps.data.cycle) }}
                     </template>
                 </Column>
-                <Column header="Próximo Pagto">
+                <Column header="Próximo Pagto" field="next_payment" sortable>
                     <template #body="slotProps">
                         {{ formatDate(slotProps.data.next_payment) }}
                     </template>
                 </Column>
-                <Column header="Status">
+                <Column header="Status" field="status" sortable>
                     <template #body="slotProps">
                         <Tag :value="slotProps.data.status" :severity="getStatusSeverity(slotProps.data.status)" />
                     </template>
@@ -37,6 +45,7 @@
                         <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteSubscription(slotProps.data)" />
                     </template>
                 </Column>
+                <template #empty> Nenhuma assinatura encontrada. </template>
             </DataTable>
         </div>
         <Dialog v-model:visible="dialogVisible" modal :header="form.id ? 'Editar Assinatura' : 'Nova Assinatura'" :style="{ width: '400px' }">
@@ -72,6 +81,7 @@ import axios from 'axios';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
+import { FilterMatchMode } from '@primevue/core/api';
 
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -82,6 +92,8 @@ import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import Select from 'primevue/select';
 import DatePicker from 'primevue/datepicker';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
 
 const router = useRouter();
 const toast = useToast();
@@ -104,6 +116,13 @@ const cycleOptions = [
     {label: 'Anual', value: 'yearly'},
     {label: 'Semanal', value: 'weekly'}
 ];
+
+const filters = ref({
+    global: {
+        value: null,
+        matchMode: FilterMatchMode.CONTAINS
+    }
+});
 
 // Validar autenticação/token
 onMounted(async () => {
