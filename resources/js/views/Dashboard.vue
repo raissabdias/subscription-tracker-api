@@ -69,6 +69,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
+import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
@@ -84,6 +85,7 @@ const subscriptions = ref([]);
 const loading = ref(true);
 const saving = ref(false);
 const dialogVisible = ref(false);
+const toast = useToast();
 const form = reactive({
     name: '',
     price: null,
@@ -193,8 +195,18 @@ const saveSubscription = async () => {
         dialogVisible.value = false;
         await fetchSubscriptions();
 
+        toast.add({
+            severity: 'success',
+            detail: form.name + ' adicionado com sucesso.',
+            life: 5000
+        });
+
     } catch (error) {
-        alert('Erro ao salvar assinatura. Verifique os campos.');
+        toast.add({
+            severity: 'error',
+            detail: 'Erro ao salvar assinatura. Verifique os campos.',
+            life: 5000
+        });
     } finally {
         saving.value = false;
     }
