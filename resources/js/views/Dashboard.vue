@@ -7,35 +7,7 @@
                 <Button label="Sair" icon="pi pi-sign-out" severity="secondary" @click="handleLogout" class="ml-2" />
             </div>
         </div>
-        <div class="stats-container">
-            <div class="kpi-column">
-                <Card style="background: #eff6ff; border-left: 4px solid #3b82f6">
-                    <template #title>Assinaturas Ativas</template>
-                    <template #content>
-                        <p class="kpi-value">{{ totalActive }}</p>
-                    </template>
-                </Card>
-                <Card style="background: #f0fdf4; border-left: 4px solid #22c55e">
-                    <template #title>Custo Mensal Estimado</template>
-                    <template #content>
-                        <p class="kpi-value">{{ formatCurrency(monthlyCost) }}</p>
-                    </template>
-                </Card>
-            </div>
-            <div class="chart-column">
-                <Card class="h-full">
-                    <template #title>Distribuição de Gastos</template>
-                    <template #content>
-                        <div class="chart-wrapper" v-if="totalActive > 0">
-                            <Chart type="doughnut" :data="chartData" :options="chartOptions" class="w-full" />
-                        </div>
-                        <div v-else class="text-center text-gray-500 py-4">
-                            Sem dados para exibir
-                        </div>
-                    </template>
-                </Card>
-            </div>
-        </div>
+        <DashboardStats :subscriptions="subscriptions" />
         <div class="card-table">
             <DataTable :value="subscriptions" tableStyle="min-width: 50rem" :loading="loading" paginator :rows="5" :rowsPerPageOptions="[5, 10, 20]" v-model:filters="filters" :globalFilterFields="['name']">
                 <template #header>
@@ -123,8 +95,8 @@ import Select from 'primevue/select';
 import DatePicker from 'primevue/datepicker';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
-import Card from 'primevue/card';
-import Chart from 'primevue/chart';
+
+import DashboardStats from '../components/Dashboard/DashboardStats.vue';
 
 const router = useRouter();
 const toast = useToast();
@@ -305,104 +277,6 @@ const editSubscription = (subscription) => {
     dialogVisible.value = true;
 };
 
-// KPI de assinaturas ativas
-const totalActive = computed(() => {
-    return subscriptions.value.filter(sub => sub.status === 'active').length;
-});
-
-// KPI de custos mensais
-const monthlyCost = computed(() => {
-    const activeSubs = subscriptions.value.filter(sub => sub.status === 'active');
-    
-    // Soma calculando a proporção mensal
-    const total = activeSubs.reduce((acc, sub) => {
-        const price = Number(sub.price); // Em centavos
-        
-        if (sub.cycle === 'yearly') {
-            return acc + (price / 12);
-        }
-        if (sub.cycle === 'weekly') {
-            return acc + (price * 4);
-        }
-        return acc + price;
-    }, 0);
-
-    return total; 
-});
-
-// Popular dados do gráfico de assinaturas
-const chartData = computed(() => {
-    const activeSubs = subscriptions.value.filter(s => s.status === 'active');
-    const labels = activeSubs.map(s => s.name);
-    const data = activeSubs.map(s => {
-        const price = Number(s.price);
-        if (s.cycle === 'yearly') return price / 12;
-        if (s.cycle === 'weekly') return price * 4;
-        return price;
-    });
-
-    return {
-        labels: labels,
-        datasets: [
-            {
-                data: data,
-                backgroundColor: [
-                    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', 
-                    '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'
-                ],
-                hoverBackgroundColor: [
-                    '#2563eb', '#059669', '#d97706', '#dc2626', 
-                    '#7c3aed', '#db2777', '#4f46e5', '#0d9488'
-                ]
-            }
-        ]
-    };
-});
-
-// Configurações do gráfico
-const chartOptions = ref({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: {
-            position: 'right',
-            labels: {
-                usePointStyle: true,
-                padding: 15 
-            }
-        },
-        tooltip: {
-            callbacks: {
-                label: function(context) {
-                    let label = context.label || '';
-                    if (label) {
-                        label += ': ';
-                    }
-
-                    // Converter os centavos para reais
-                    if (context.parsed !== null) {
-                        label += new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL'
-                        }).format(context.raw / 100);
-                    }
-
-                    return label;
-                }
-            }
-        }
-    },
-    layout: {
-        padding: {
-            left: 0, 
-            right: 30,
-            top: 0,
-            bottom: 0
-        }
-    },
-    cutout: '65%'
-});
-
 // Formatação dos valores para reais
 const formatCurrency = (valueInCents) => {
     if (!valueInCents) return 'R$ 0,00';
@@ -462,57 +336,8 @@ const getStatusSeverity = (status) => {
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
-.stats-container {
-    display: grid;
-    grid-template-columns: 1fr 2fr; 
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-    align-items: stretch;
-}
-
-.kpi-column {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    height: 100%;
-}
-
-.kpi-column .p-card {
-    flex: 1; 
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.chart-column .p-card {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
-.chart-wrapper {
-    flex-grow: 1;
-    position: relative;
-    min-height: 200px;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.kpi-value {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #1f2937;
-    margin: 0;
-}
-
 .field { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
 .field label { font-weight: bold; color: #4b5563; }
 :deep(.p-inputtext), :deep(.p-inputnumber) { width: 100%; }
 .ml-2 { margin-left: 0.5rem; }
-.h-full { height: 100%; }
-.text-center { text-align: center; }
-.text-gray-500 { color: #6b7280; }
-.py-4 { padding-top: 1rem; padding-bottom: 1rem; }
 </style>
