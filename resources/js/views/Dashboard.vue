@@ -3,55 +3,28 @@
         <div class="header">
             <h1>Minhas Assinaturas</h1>
             <div class="actions">
-                <Button label="Nova Assinatura" icon="pi pi-plus" @click="openNewSubscription" />
+                <Button label="Nova Assinatura" icon="pi pi-plus" @click="openCreateModal" />
                 <Button label="Sair" icon="pi pi-sign-out" severity="secondary" @click="handleLogout" class="ml-2" />
             </div>
         </div>
         <DashboardStats :subscriptions="subscriptions" />
         <SubscriptionTable :subscriptions="subscriptions" :loading="loading" @edit="openEditModal"@delete="confirmDeleteSubscription" />
-        <Dialog v-model:visible="dialogVisible" modal :header="form.id ? 'Editar Assinatura' : 'Nova Assinatura'" :style="{ width: '400px' }">
-            <div class="form-content">
-                <div class="field">
-                    <label for="name">Nome do Serviço</label>
-                    <InputText id="name" v-model="form.name" required autofocus fluid />
-                </div>
-                <div class="field">
-                    <label for="price">Preço</label>
-                    <InputNumber id="price" v-model="form.price" mode="currency" currency="BRL" locale="pt-BR" fluid />
-                </div>
-                <div class="field">
-                    <label for="cycle">Ciclo</label>
-                    <Select id="cycle" v-model="form.billing_cycle" :options="cycleOptions" optionLabel="label" optionValue="value" placeholder="Selecione" fluid />
-                </div>
-                <div class="field">
-                    <label for="date">Primeiro Pagamento</label>
-                    <DatePicker id="date" v-model="form.next_payment" dateFormat="dd/mm/yy" showIcon fluid />
-                </div>
-            </div>
-            <template #footer>
-                <Button label="Cancelar" icon="pi pi-times" text @click="dialogVisible = false" />
-                <Button label="Salvar" icon="pi pi-check" @click="saveSubscription" :loading="saving" />
-            </template>
-        </Dialog>
+        <SubscriptionForm v-model:visible="dialogVisible" :initial-data="editingSubscription" @saved="fetchSubscriptions"/>
     </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 
 import Button from 'primevue/button';
-import Dialog from 'primevue/dialog';
-import InputText from 'primevue/inputtext';
-import InputNumber from 'primevue/inputnumber';
-import Select from 'primevue/select';
-import DatePicker from 'primevue/datepicker';
 
 import DashboardStats from '../components/Dashboard/DashboardStats.vue';
 import SubscriptionTable from '../components/Dashboard/SubscriptionTable.vue';
+import SubscriptionForm from '../components/Dashboard/SubscriptionForm.vue';
 
 const router = useRouter();
 const toast = useToast();
@@ -59,22 +32,8 @@ const confirm = useConfirm();
 
 const subscriptions = ref([]);
 const loading = ref(true);
-const saving = ref(false);
 const dialogVisible = ref(false);
 const editingSubscription = ref(null);
-
-const form = reactive({
-    name: '',
-    price: null,
-    billing_cycle: '',
-    next_billing_date: null
-});
-
-const cycleOptions = [
-    {label: 'Mensal', value: 'monthly'},
-    {label: 'Anual', value: 'yearly'},
-    {label: 'Semanal', value: 'weekly'}
-];
 
 // Validar autenticação/token
 onMounted(async () => {
@@ -114,62 +73,9 @@ const handleLogout = async () => {
 };
 
 // Ativar modal de adição
-const openNewSubscription = () => {
-    // Limpa o formulário antes de abrir
-    form.name = '';
-    form.price = null;
-    form.billing_cycle = '';
-    form.next_billing_date = null;
+const openCreateModal = () => {
+    editingSubscription.value = null;
     dialogVisible.value = true;
-};
-
-// Salvar nova assinatura
-const saveSubscription = async () => {
-    saving.value = true;
-
-    try {
-        const formatDatePayload = (date) => {
-            if (!date) return null;
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        };
-
-        const payload = {
-            ...form,
-            price: form.price ? Math.round(form.price * 100) : 0, // Alterar para inteiro (29.90 -> 2990)
-            next_payment: formatDatePayload(form.next_payment)
-        };
-
-        if (form.id) {
-            await axios.put(`/api/subscriptions/${form.id}`, payload);
-            toast.add({
-                severity: 'success',
-                detail: form.name + ' alterado com sucesso.',
-                life: 5000
-            });
-        } else {
-            await axios.post('/api/subscriptions', payload);
-            toast.add({
-                severity: 'success',
-                detail: form.name + ' adicionado com sucesso.',
-                life: 5000
-            });
-        }
-        
-        dialogVisible.value = false;
-        await fetchSubscriptions();
-
-    } catch (error) {
-        toast.add({
-            severity: 'error',
-            detail: 'Erro ao salvar assinatura. Verifique os campos.',
-            life: 5000
-        });
-    } finally {
-        saving.value = false;
-    }
 };
 
 // Deletar assinatura
@@ -241,9 +147,4 @@ const openEditModal = (subscription) => {
     align-items: center;
     margin-bottom: 2rem;
 }
-
-.field { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
-.field label { font-weight: bold; color: #4b5563; }
-:deep(.p-inputtext), :deep(.p-inputnumber) { width: 100%; }
-.ml-2 { margin-left: 0.5rem; }
 </style>
