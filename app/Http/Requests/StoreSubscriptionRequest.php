@@ -26,6 +26,7 @@ class StoreSubscriptionRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:1',
+            'category' => ['nullable', 'string', 'max:50'],
             'billing_cycle' => ['required', Rule::enum(BillingCycle::class)],
             'next_payment' => 'required|date',
             'status' => 'nullable|in:active,inactive',

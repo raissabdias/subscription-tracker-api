@@ -14,6 +14,7 @@ class Subscription extends Model
         'user_id',
         'name',
         'price_in_cents',
+        'category',
         'billing_cycle',
         'next_billing_date',
         'status',
