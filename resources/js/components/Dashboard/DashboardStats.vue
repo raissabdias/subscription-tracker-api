@@ -46,10 +46,6 @@ const props = defineProps({
 // Helper seguro para pegar a lista
 const getSubs = () => props.subscriptions || [];
 
-const hasData = computed(() => {
-    return getSubs().filter(s => s.status === 'active').length > 0;
-});
-
 // KPI de assinaturas ativas
 const totalActive = computed(() => {
     return getSubs().filter(sub => sub.status === 'active').length;

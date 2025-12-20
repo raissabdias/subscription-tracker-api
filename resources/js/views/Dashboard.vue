@@ -8,47 +8,7 @@
             </div>
         </div>
         <DashboardStats :subscriptions="subscriptions" />
-        <div class="card-table">
-            <DataTable :value="subscriptions" tableStyle="min-width: 50rem" :loading="loading" paginator :rows="5" :rowsPerPageOptions="[5, 10, 20]" v-model:filters="filters" :globalFilterFields="['name']">
-                <template #header>
-                    <div class="flex justify-end">
-                        <IconField iconPosition="left">
-                            <InputIcon class="pi pi-search" />
-                            <InputText v-model="filters['global'].value" placeholder="Pesquisar serviço..." />
-                        </IconField>
-                    </div>
-                </template>
-                <Column field="id" header="#" sortable></Column>
-                <Column field="name" header="Serviço" sortable></Column>
-                <Column header="Preço" field="price" sortable>
-                    <template #body="slotProps">
-                        {{ formatCurrency(slotProps.data.price) }}
-                    </template>
-                </Column>
-                <Column header="Ciclo" field="cycle" sortable>
-                    <template #body="slotProps">
-                        {{ translateCycle(slotProps.data.cycle) }}
-                    </template>
-                </Column>
-                <Column header="Próximo Pagto" field="next_payment" sortable>
-                    <template #body="slotProps">
-                        {{ formatDate(slotProps.data.next_payment) }}
-                    </template>
-                </Column>
-                <Column header="Status" field="status" sortable>
-                    <template #body="slotProps">
-                        <Tag :value="slotProps.data.status" :severity="getStatusSeverity(slotProps.data.status)" />
-                    </template>
-                </Column>
-                <Column header="Ações" :exportable="false" style="min-width:8rem">
-                    <template #body="slotProps">
-                        <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editSubscription(slotProps.data)" />
-                        <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteSubscription(slotProps.data)" />
-                    </template>
-                </Column>
-                <template #empty> Nenhuma assinatura encontrada. </template>
-            </DataTable>
-        </div>
+        <SubscriptionTable :subscriptions="subscriptions" :loading="loading" @edit="openEditModal"@delete="confirmDeleteSubscription" />
         <Dialog v-model:visible="dialogVisible" modal :header="form.id ? 'Editar Assinatura' : 'Nova Assinatura'" :style="{ width: '400px' }">
             <div class="form-content">
                 <div class="field">
@@ -82,21 +42,16 @@ import axios from 'axios';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
-import { FilterMatchMode } from '@primevue/core/api';
 
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
 import Button from 'primevue/button';
-import Tag from 'primevue/tag';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import Select from 'primevue/select';
 import DatePicker from 'primevue/datepicker';
-import IconField from 'primevue/iconfield';
-import InputIcon from 'primevue/inputicon';
 
 import DashboardStats from '../components/Dashboard/DashboardStats.vue';
+import SubscriptionTable from '../components/Dashboard/SubscriptionTable.vue';
 
 const router = useRouter();
 const toast = useToast();
@@ -106,6 +61,7 @@ const subscriptions = ref([]);
 const loading = ref(true);
 const saving = ref(false);
 const dialogVisible = ref(false);
+const editingSubscription = ref(null);
 
 const form = reactive({
     name: '',
@@ -119,13 +75,6 @@ const cycleOptions = [
     {label: 'Anual', value: 'yearly'},
     {label: 'Semanal', value: 'weekly'}
 ];
-
-const filters = ref({
-    global: {
-        value: null,
-        matchMode: FilterMatchMode.CONTAINS
-    }
-});
 
 // Validar autenticação/token
 onMounted(async () => {
@@ -261,7 +210,7 @@ const confirmDeleteSubscription = (subscription) => {
 };
 
 // Editar assinatura
-const editSubscription = (subscription) => {
+const openEditModal = (subscription) => {
     form.id = subscription.id;
     form.name = subscription.name;
     form.billing_cycle = subscription.cycle;
@@ -275,42 +224,6 @@ const editSubscription = (subscription) => {
     }
     
     dialogVisible.value = true;
-};
-
-// Formatação dos valores para reais
-const formatCurrency = (valueInCents) => {
-    if (!valueInCents) return 'R$ 0,00';
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(valueInCents / 100); // Lembre-se de dividir por 100!
-};
-
-// Formatação de data no padrão pt-br
-const formatDate = (dateString) => {
-if (!dateString) return '-';
-    const [year, month, day] = dateString.split('-');
-    const date = new Date(Number(year), Number(month) - 1, Number(day), 12, 0, 0);
-    return date.toLocaleDateString('pt-BR');
-};
-
-// Traduz o ENUM do banco para Português
-const translateCycle = (cycle) => {
-    const map = {
-        'monthly': 'Mensal',
-        'yearly': 'Anual',
-        'weekly': 'Semanal'
-    };
-    return map[cycle] || cycle;
-};
-
-// Cores do status
-const getStatusSeverity = (status) => {
-    switch (status) {
-        case 'active': return 'success';
-        case 'inactive': return 'danger';
-        default: return 'info';
-    }
 };
 </script>
 
@@ -327,13 +240,6 @@ const getStatusSeverity = (status) => {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 2rem;
-}
-
-.card-table {
-    background: white;
-    padding: 1rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
 .field { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
