@@ -117,18 +117,7 @@ const confirmDeleteSubscription = (subscription) => {
 
 // Editar assinatura
 const openEditModal = (subscription) => {
-    form.id = subscription.id;
-    form.name = subscription.name;
-    form.billing_cycle = subscription.cycle;
-    form.price = subscription.price / 100; 
-
-    if (subscription.next_payment) {
-        const [year, month, day] = subscription.next_payment.split('-');
-        form.next_payment = new Date(Number(year), Number(month) - 1, Number(day), 12, 0, 0);
-    } else {
-        form.next_payment = null;
-    }
-    
+    editingSubscription.value = subscription; 
     dialogVisible.value = true;
 };
 </script>

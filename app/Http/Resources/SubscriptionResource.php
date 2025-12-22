@@ -18,6 +18,7 @@ class SubscriptionResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'price' => $this->price_in_cents / 100, 
+            'category' => $this->category,
             'cycle' => $this->billing_cycle,
             'next_payment' => $this->next_billing_date->format('Y-m-d'),
             'status' => $this->status,

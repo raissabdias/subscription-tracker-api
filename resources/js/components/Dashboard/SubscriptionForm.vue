@@ -6,6 +6,10 @@
                 <InputText id="name" v-model="form.name" required autofocus fluid />
             </div>
             <div class="field">
+                <label for="category">Categoria</label>
+                <Select id="category" v-model="form.category" :options="categoryOptions" optionLabel="label" optionValue="value" placeholder="Selecione uma categoria" fluid />
+            </div>
+            <div class="field">
                 <label for="price">Preço</label>
                 <InputNumber id="price" v-model="form.price" mode="currency" currency="BRL" locale="pt-BR" fluid />
             </div>
@@ -26,7 +30,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, computed } from 'vue';
+import { ref, reactive, watch, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { useToast } from 'primevue/usetoast';
 
@@ -45,6 +49,7 @@ const props = defineProps({
 const emit = defineEmits(['update:visible', 'saved']);
 const toast = useToast();
 const saving = ref(false);
+const categoryOptions = ref([]);
 
 // Sincroniza a visibilidade com o Pai
 const isVisible = computed({
@@ -80,13 +85,32 @@ const parseDateISO = (dateString) => {
     return new Date(Number(year), Number(month) - 1, Number(day), 12, 0, 0);
 };
 
+// Popular dados das categorias ao montar o componente
+onMounted(async () => {
+    try {
+        const token = localStorage.getItem('auth_token');
+        const response = await axios.get('/api/categories', {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        categoryOptions.value = response.data;
+    } catch (error) {
+        toast.add({ severity: 'error', summary: 'Erro', detail: 'Erro ao carregar categorias.', life: 3000 });
+        categoryOptions.value = [{ label: 'Outros', value: 'Outros' }];
+    }
+});
+
 // Preencher form com dados de edição vindos do Pai
 watch(() => props.initialData, (newData) => {
+    console.log(newData);
     if (newData) {
         form.id = newData.id;
         form.name = newData.name;
         form.price = newData.price / 100;
-        form.billing_cycle = newData.billing_cycle;
+        form.billing_cycle = newData.cycle;
+        form.category = newData.category;
         form.next_payment = parseDateISO(newData.next_payment);
     }
 }, { immediate: true });
@@ -119,8 +143,10 @@ const handleSave = async () => {
             billing_cycle: form.billing_cycle,
             category: 'Outros', // Hardcoded por enquanto até implementarmos o select de categoria
             price: form.price ? Math.round(form.price * 100) : 0,
-            next_payment: formatToYmdLocal(form.next_payment)
+            next_payment: formatToYmdLocal(form.next_payment),
+            category: form.category
         };
+        console.log('Payload to save:', payload);
 
         if (form.id) {
             await axios.put(`/api/subscriptions/${form.id}`, payload);

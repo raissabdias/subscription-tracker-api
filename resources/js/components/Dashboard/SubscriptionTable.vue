@@ -16,6 +16,11 @@
                     {{ formatCurrency(slotProps.data.price) }}
                 </template>
             </Column>
+            <Column header="Ciclo" field="category" sortable>
+                <template #body="slotProps">
+                    {{ translateCycle(slotProps.data.category) }}
+                </template>
+            </Column>
             <Column header="Ciclo" field="cycle" sortable>
                 <template #body="slotProps">
                     {{ translateCycle(slotProps.data.cycle) }}
