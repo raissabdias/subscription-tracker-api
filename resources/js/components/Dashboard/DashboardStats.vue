@@ -66,14 +66,26 @@ const monthlyCost = computed(() => {
 // Popular dados do gráfico de assinaturas
 const chartData = computed(() => {
     const activeSubs = getSubs().filter(s => s.status === 'active');
+
+    const groups = activeSubs.reduce((acc, sub) => {
+        const category = sub.category || 'Outros';
+        const priceInCents = Number(sub.price || 0);
+        let monthlyCents = priceInCents;
+        
+        // Ajusta conforme o ciclo
+        if (sub.cycle === 'yearly') {
+            monthlyCents = priceInCents / 12;
+        } else if (sub.cycle === 'weekly') {
+            monthlyCents = priceInCents * 4;
+        }
+
+        acc[category] = (acc[category] || 0) + monthlyCents;
+        
+        return acc;
+    }, {});
     
-    const labels = activeSubs.map(s => s.name);
-    const data = activeSubs.map(s => {
-        const price = Number(s.price);
-        if (s.cycle === 'yearly') return price / 12;
-        if (s.cycle === 'weekly') return price * 4;
-        return price;
-    });
+    const labels = Object.keys(groups);
+    const data = Object.values(groups).map(cents => (cents / 100).toFixed(2));
 
     return {
         labels: labels,
@@ -96,7 +108,7 @@ const chartOptions = ref({
                     let label = context.label || '';
                     if (label) label += ': ';
                     if (context.parsed !== null) {
-                        label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.raw / 100);
+                        label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.raw);
                     }
                     return label;
                 }
